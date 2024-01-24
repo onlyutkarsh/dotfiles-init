@@ -74,17 +74,31 @@ if [ ! -d "$ssh_dir" ]; then
 fi
 
 # Configure SSH config file for GitHub and GitLab
-cat <<EOF >>"$ssh_dir/config"
+# Check and append entries to SSH config file for GitHub and GitLab
+config_file="$ssh_dir/config"
 
-Host github.com
-    HostName github.com
-    IdentityFile $ssh_dir/id_ed25519_github
+if ! grep -q "Host github.com" "$config_file"; then
+    echo -e "\nHost github.com\n    HostName github.com\n    IdentityFile $ssh_dir/id_ed25519_github\n" >>"$config_file"
+    echo_success "GitHub entry added to $config_file."
+else
+    echo_success "GitHub entry already exists in $config_file."
+fi
 
-Host gitlab.com
-    HostName gitlab.com
-    IdentityFile $ssh_dir/id_ed25519_gitlab
-EOF
-chmod 600 "$ssh_dir/config"
+if ! grep -q "Host gitlab.com" "$config_file"; then
+    echo -e "\nHost gitlab.com\n    HostName gitlab.com\n    IdentityFile $ssh_dir/id_ed25519_gitlab\n" >>"$config_file"
+    echo_success "GitLab entry added to $config_file."
+else
+    echo_success "GitLab entry already exists in $config_file."
+fi
+
+if ! grep -q "Host ssh.dev.azure.com" "$config_file"; then
+    echo -e "\nHost ssh.dev.azure.com\n    HostName ssh.dev.azure.com\n    IdentityFile $ssh_dir/id_rsa_azuredevops\n" >>"$config_file"
+    echo_success "Azure DevOps entry added to $config_file."
+else
+    echo_success "Azure DevOps entry already exists in $config_file."
+fi
+
+chmod 600 "$config_file"
 echo_success "SSH config file configured and permissions set."
 
 # Copy and set permissions for GitHub SSH key
@@ -92,6 +106,9 @@ set_permissions "id_ed25519_github"
 
 # Copy and set permissions for GitLab SSH key
 set_permissions "id_ed25519_gitlab"
+
+# Copy and set permissions for Azure DevOps SSH key
+set_permissions "id_rsa_azuredevops"
 
 echo "SSH directory setup complete! Setting up Chezmoi now..."
 if ! command -v chezmoi &>/dev/null; then
