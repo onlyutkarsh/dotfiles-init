@@ -53,11 +53,11 @@ set_git_config() {
 
     # Set Git username
     git config --global user.name "$username"
-    echo_success "Git username set to: $username"
+    echo_success "git username set to: $username"
 
     # Set Git email
     git config --global user.email "$email"
-    echo_success "Git email set to: $email"
+    echo_success "git email set to: $email"
 }
 
 # Set up SSH directory if not already present
