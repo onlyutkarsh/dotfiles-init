@@ -1,12 +1,43 @@
 #!/bin/bash
 
+# Function to echo an error message in red
+echo_error() {
+    echo -e "\e[91mError: $1\e[0m" >&2
+}
+
+# Function to echo a warning message in yellow
+echo_warning() {
+    echo -e "\e[93mWarning: $1\e[0m" >&2
+}
+
+# Function to echo a success message in green
+echo_success() {
+    echo -e "\e[32m$1\e[0m"
+}
+
+# Function to copy and set permissions for SSH key files
+set_permissions() {
+    local key_name="$1"
+    local key_path="$ssh_dir/$key_name"
+    local pub_key_path="$ssh_dir/$key_path.pub"
+
+    if [ -f "$key_path" ] && [ -f "$pub_key_path" ]; then
+        chmod 600 "$ssh_dir/$key_name"
+        chmod 644 "$ssh_dir/$key_name.pub"
+        echo_success "$key_name and $key_name.pub permissions set."
+    else
+        echo_error "$key_name or $key_name.pub not found at $key_path - Please copy them to $ssh_dir and run this script again."
+    fi
+}
+
 # Install Zsh if not already installed
 if ! command -v zsh &>/dev/null; then
     sudo apt update
     sudo apt install -y zsh
     chsh -s $(which zsh)
+    echo_success "Zsh installed and configured."
 else
-    echo "Zsh is already installed."
+    echo_warning "Zsh is already installed."
 fi
 
 # Check if Homebrew is installed
@@ -21,9 +52,9 @@ if ! command -v brew &>/dev/null; then
     # Test Homebrew installation
     brew doctor
 
-    echo "Homebrew installed and configured."
+    echo_success "Homebrew installed and configured."
 else
-    echo "Homebrew is already installed."
+    echo_warning "Homebrew is already installed."
 fi
 
 echo "Zsh and Homebrew setup complete! Setting up SSH directory now..."
@@ -33,6 +64,7 @@ ssh_dir="$HOME/.ssh"
 if [ ! -d "$ssh_dir" ]; then
     mkdir -p "$ssh_dir"
     chmod 700 "$ssh_dir"
+    echo_success "SSH directory created."
 fi
 
 # Configure SSH config file for GitHub and GitLab
@@ -47,22 +79,7 @@ Host gitlab.com
     IdentityFile $ssh_dir/id_ed25519_gitlab
 EOF
 chmod 600 "$ssh_dir/config"
-echo "SSH config file configured."
-
-# Function to copy and set permissions for SSH key files
-set_permissions() {
-    local key_name="$1"
-    local key_path="$ssh_dir/$key_name"
-    local pub_key_path="$ssh_dir/$key_path.pub"
-
-    if [ -f "$key_path" ] && [ -f "$pub_key_path" ]; then
-        chmod 600 "$ssh_dir/$key_name"
-        chmod 644 "$ssh_dir/$key_name.pub"
-        echo "$key_name and $key_name.pub permissions set."
-    else
-        echo "Error: $key_name or $key_name.pub not found at $key_path - Please copy them to $ssh_dir and run this script again."
-    fi
-}
+echo_success "SSH config file configured and permissions set."
 
 # Copy and set permissions for GitHub SSH key
 set_permissions "id_ed25519_github"
@@ -73,6 +90,9 @@ set_permissions "id_ed25519_gitlab"
 echo "SSH directory setup complete! Setting up Chezmoi now..."
 if ! command -v chezmoi &>/dev/null; then
     brew install chezmoi
+    echo_success "chezmoi installed."
+else
+    echo "chezmoi is already installed."
 fi
 
 echo "update git using brew"
@@ -80,9 +100,9 @@ echo "update git using brew"
 if brew list --formula | grep -q "git"; then
     # Update Git using Homebrew
     brew upgrade git
-    echo "Git updated using Homebrew."
+    echo_success "Git updated using Homebrew."
 else
     # Install Git using Homebrew
     brew install git
-    echo "Git installed using Homebrew."
+    echo_success "Git installed using Homebrew."
 fi
