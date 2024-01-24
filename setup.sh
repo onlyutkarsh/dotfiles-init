@@ -32,14 +32,14 @@ set_permissions() {
 
     if [ -f "$key_path" ]; then
         chmod 600 "$key_path"
-        echo_success "$key_path permissions set."
+        echo_success "permissions set for $key_path"
     else
         echo_warning "$key_name not found at $key_path - Please copy it to $ssh_dir and run this script again."
     fi
 
     if [ -f "$pub_key_path" ]; then
         chmod 644 "$pub_key_path"
-        echo_success "$pub_key_path permissions set."
+        echo_success "permissions set for $pub_key_path"
     else
         echo_warning "$key_name.pub not found at $pub_key_path - Please copy it to $ssh_dir and run this script again."
     fi
@@ -71,8 +71,6 @@ if ! command -v brew &>/dev/null; then
 else
     echo_message "Homebrew is already installed."
 fi
-
-echo "Zsh and Homebrew setup complete! Setting up SSH directory now..."
 
 # Set up SSH directory if not already present
 ssh_dir="$HOME/.ssh"
@@ -121,7 +119,6 @@ set_permissions "id_ed25519_gitlab"
 # Copy and set permissions for Azure DevOps SSH key
 set_permissions "id_rsa_azuredevops"
 
-echo "SSH directory setup complete! Setting up Chezmoi now..."
 if ! command -v chezmoi &>/dev/null; then
     brew install chezmoi
     echo_success "chezmoi installed."
@@ -129,7 +126,6 @@ else
     echo_message "chezmoi is already installed."
 fi
 
-echo "update git using brew"
 # Check if Git is installed
 if brew list --formula | grep -q "git"; then
     # Update Git using Homebrew
