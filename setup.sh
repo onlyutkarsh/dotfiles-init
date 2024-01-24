@@ -130,9 +130,10 @@ fi
 echo_message "install/update git..."
 # Check if Git is installed
 if brew list --formula | grep -q "git"; then
+    echo_message "git is already installed. updating..."
     # Update Git using Homebrew
     brew upgrade git
-    echo_success "Git updated using Homebrew."
+    echo_info "Git updated using Homebrew."
 else
     # Install Git using Homebrew
     brew install git
