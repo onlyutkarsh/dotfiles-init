@@ -17,7 +17,7 @@ echo_success() {
 
 # Function to echo an info message in blue
 echo_info() {
-    echo -e "\e[34m$1\e[0m"
+    echo -e "\e[36m$1\e[0m"
 }
 
 # Function to copy and set permissions for SSH key files
@@ -136,3 +136,5 @@ else
     brew install git
     echo_success "Git installed using Homebrew."
 fi
+
+echo_success "All done!"
