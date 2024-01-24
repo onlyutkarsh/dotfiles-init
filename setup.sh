@@ -123,7 +123,6 @@ else
     echo_message "Homebrew is already installed."
 fi
 
-echo_message "chezmoi..."
 if ! command -v chezmoi &>/dev/null; then
     brew install chezmoi
     echo_success "chezmoi installed."
@@ -131,17 +130,16 @@ else
     echo_message "chezmoi is already installed."
 fi
 
-echo_message "install/update git..."
 # Check if Git is installed
 if brew list --formula | grep -q "git"; then
     echo_message "git is already installed. updating..."
     # Update Git using Homebrew
     brew upgrade git
-    echo_info "Git updated using Homebrew."
+    echo_info "git updated using Homebrew."
 else
     # Install Git using Homebrew
     brew install git
-    echo_success "Git installed using Homebrew."
+    echo_success "git installed using Homebrew."
 fi
 
 echo_success "All done!"
