@@ -83,7 +83,6 @@ else
 fi
 
 set_permissions "$config_file" 600
-echo_success "~/.ssh/config file configured and permissions set."
 
 # Copy and set permissions for GitHub SSH key
 set_permissions "$ssh_dir/id_ed25519_github" 600
