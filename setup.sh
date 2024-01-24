@@ -119,6 +119,7 @@ set_permissions "id_ed25519_gitlab"
 # Copy and set permissions for Azure DevOps SSH key
 set_permissions "id_rsa_azuredevops"
 
+echo_message "chezmoi..."
 if ! command -v chezmoi &>/dev/null; then
     brew install chezmoi
     echo_success "chezmoi installed."
@@ -126,6 +127,7 @@ else
     echo_message "chezmoi is already installed."
 fi
 
+echo_message "install/update git..."
 # Check if Git is installed
 if brew list --formula | grep -q "git"; then
     # Update Git using Homebrew
