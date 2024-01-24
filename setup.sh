@@ -15,6 +15,11 @@ echo_success() {
     echo -e "\e[32m$1\e[0m"
 }
 
+# Function to echo an info message in blue
+echo_info() {
+    echo -e "\e[34m$1\e[0m"
+}
+
 # Function to copy and set permissions for SSH key files
 set_permissions() {
     local key_name="$1"
@@ -43,7 +48,7 @@ if ! command -v zsh &>/dev/null; then
     chsh -s $(which zsh)
     echo_success "Zsh installed and configured."
 else
-    echo_success "Zsh is already installed."
+    echo_info "Zsh is already installed."
 fi
 
 # Check if Homebrew is installed
@@ -60,7 +65,7 @@ if ! command -v brew &>/dev/null; then
 
     echo_success "Homebrew installed and configured."
 else
-    echo_success "Homebrew is already installed."
+    echo_info "Homebrew is already installed."
 fi
 
 echo "Zsh and Homebrew setup complete! Setting up SSH directory now..."
@@ -71,6 +76,8 @@ if [ ! -d "$ssh_dir" ]; then
     mkdir -p "$ssh_dir"
     chmod 700 "$ssh_dir"
     echo_success "SSH directory created."
+else
+    echo_info "SSH directory already exists."
 fi
 
 # Configure SSH config file for GitHub and GitLab
@@ -81,21 +88,21 @@ if ! grep -q "Host github.com" "$config_file"; then
     echo -e "\nHost github.com\n    HostName github.com\n    IdentityFile $ssh_dir/id_ed25519_github\n" >>"$config_file"
     echo_success "GitHub entry added to $config_file."
 else
-    echo_success "GitHub entry already exists in $config_file."
+    echo_info "GitHub entry already exists in $config_file."
 fi
 
 if ! grep -q "Host gitlab.com" "$config_file"; then
     echo -e "\nHost gitlab.com\n    HostName gitlab.com\n    IdentityFile $ssh_dir/id_ed25519_gitlab\n" >>"$config_file"
     echo_success "GitLab entry added to $config_file."
 else
-    echo_success "GitLab entry already exists in $config_file."
+    echo_info "GitLab entry already exists in $config_file."
 fi
 
 if ! grep -q "Host ssh.dev.azure.com" "$config_file"; then
     echo -e "\nHost ssh.dev.azure.com\n    HostName ssh.dev.azure.com\n    IdentityFile $ssh_dir/id_rsa_azuredevops\n" >>"$config_file"
     echo_success "Azure DevOps entry added to $config_file."
 else
-    echo_success "Azure DevOps entry already exists in $config_file."
+    echo_info "Azure DevOps entry already exists in $config_file."
 fi
 
 chmod 600 "$config_file"
@@ -115,7 +122,7 @@ if ! command -v chezmoi &>/dev/null; then
     brew install chezmoi
     echo_success "chezmoi installed."
 else
-    echo_success "chezmoi is already installed."
+    echo_info "chezmoi is already installed."
 fi
 
 echo "update git using brew"
