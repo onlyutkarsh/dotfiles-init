@@ -19,20 +19,20 @@ echo_success() {
 set_permissions() {
     local key_name="$1"
     local key_path="$ssh_dir/$key_name"
-    local pub_key_path="$ssh_dir/$key_path.pub"
+    local pub_key_path="$ssh_dir/$key_name.pub"
 
     if [ -f "$key_path" ]; then
         chmod 600 "$key_path"
         echo_success "$key_path permissions set."
     else
-        echo_error "$key_name not found at $key_path - Please copy it to $ssh_dir and run this script again."
+        echo_warning "$key_name not found at $key_path - Please copy it to $ssh_dir and run this script again."
     fi
 
     if [ -f "$pub_key_path" ]; then
         chmod 644 "$pub_key_path"
         echo_success "$pub_key_path permissions set."
     else
-        echo_error "$key_name.pub not found at $pub_key_path - Please copy it to $ssh_dir and run this script again."
+        echo_warning "$key_name.pub not found at $pub_key_path - Please copy it to $ssh_dir and run this script again."
     fi
 }
 
@@ -43,7 +43,7 @@ if ! command -v zsh &>/dev/null; then
     chsh -s $(which zsh)
     echo_success "Zsh installed and configured."
 else
-    echo_warning "Zsh is already installed."
+    echo_success "Zsh is already installed."
 fi
 
 # Check if Homebrew is installed
@@ -60,7 +60,7 @@ if ! command -v brew &>/dev/null; then
 
     echo_success "Homebrew installed and configured."
 else
-    echo_warning "Homebrew is already installed."
+    echo_success "Homebrew is already installed."
 fi
 
 echo "Zsh and Homebrew setup complete! Setting up SSH directory now..."
@@ -98,7 +98,7 @@ if ! command -v chezmoi &>/dev/null; then
     brew install chezmoi
     echo_success "chezmoi installed."
 else
-    echo "chezmoi is already installed."
+    echo_success "chezmoi is already installed."
 fi
 
 echo "update git using brew"
