@@ -86,16 +86,16 @@ set_permissions "$config_file" 600
 echo_success "~/.ssh/config file configured and permissions set."
 
 # Copy and set permissions for GitHub SSH key
-set_permissions "~/.ssh/id_ed25519_github" 600
-set_permissions "~/.ssh/id_ed25519_github.pub" 644
+set_permissions "$ssh_dir/id_ed25519_github" 600
+set_permissions "$ssh_dir/id_ed25519_github.pub" 644
 
 # Copy and set permissions for GitLab SSH key
-set_permissions "~/.ssh/id_ed25519_gitlab" 600
-set_permissions "~/.ssh/id_ed25519_gitlab.pub" 644
+set_permissions "$ssh_dir/id_ed25519_gitlab" 600
+set_permissions "$ssh_dir/id_ed25519_gitlab.pub" 644
 
 # Copy and set permissions for Azure DevOps SSH key
-set_permissions "~/.ssh/id_rsa_azuredevops" 600
-set_permissions "~/.ssh/id_rsa_azuredevops.pub" 644
+set_permissions "$ssh_dir/id_rsa_azuredevops" 600
+set_permissions "$ssh_dir/id_rsa_azuredevops.pub" 644
 
 # Install Zsh if not already installed
 if ! command -v zsh &>/dev/null; then
