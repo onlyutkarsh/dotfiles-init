@@ -21,12 +21,18 @@ set_permissions() {
     local key_path="$ssh_dir/$key_name"
     local pub_key_path="$ssh_dir/$key_path.pub"
 
-    if [ -f "$key_path" ] && [ -f "$pub_key_path" ]; then
-        chmod 600 "$ssh_dir/$key_name"
-        chmod 644 "$ssh_dir/$key_name.pub"
-        echo_success "$key_name and $key_name.pub permissions set."
+    if [ -f "$key_path" ] then
+        chmod 600 "$key_path"
+        echo_success "$key_path permissions set."
     else
-        echo_error "$key_name or $key_name.pub not found at $key_path - Please copy them to $ssh_dir and run this script again."
+        echo_error "$key_name not found at $key_path - Please copy it to $ssh_dir and run this script again."
+    fi
+
+    if [ -f "$pub_key_path" ] then
+        chmod 644 "$pub_key_path"
+        echo_success "$pub_key_path permissions set."
+    else
+        echo_error "$key_name.pub not found at $pub_key_path - Please copy it to $ssh_dir and run this script again."
     fi
 }
 
