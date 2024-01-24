@@ -85,21 +85,21 @@ fi
 config_file="$ssh_dir/config"
 
 if ! grep -q "Host github.com" "$config_file"; then
-    echo -e "\nHost github.com\n    HostName github.com\n    IdentityFile ~/.ssh/id_ed25519_github\n" >>"$config_file"
+    echo -e "\nHost github.com\n    HostName github.com\n    IdentityFile ~/.ssh/id_ed25519_github" >>"$config_file"
     echo_success "GitHub entry added to $config_file."
 else
     echo_info "GitHub entry already exists in $config_file."
 fi
 
 if ! grep -q "Host gitlab.com" "$config_file"; then
-    echo -e "\nHost gitlab.com\n    HostName gitlab.com\n    IdentityFile ~/.ssh/id_ed25519_gitlab\n" >>"$config_file"
+    echo -e "\nHost gitlab.com\n    HostName gitlab.com\n    IdentityFile ~/.ssh/id_ed25519_gitlab" >>"$config_file"
     echo_success "GitLab entry added to $config_file."
 else
     echo_info "GitLab entry already exists in $config_file."
 fi
 
 if ! grep -q "Host ssh.dev.azure.com" "$config_file"; then
-    echo -e "\nHost ssh.dev.azure.com\n    HostName ssh.dev.azure.com\n    IdentityFile ~/.ssh/id_rsa_azuredevops\n" >>"$config_file"
+    echo -e "\nHost ssh.dev.azure.com\n    HostName ssh.dev.azure.com\n    IdentityFile ~/.ssh/id_rsa_azuredevops" >>"$config_file"
     echo_success "Azure DevOps entry added to $config_file."
 else
     echo_info "Azure DevOps entry already exists in $config_file."
