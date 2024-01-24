@@ -43,8 +43,21 @@ set_permissions() {
             echo_message "permissions for $file_path are already $desired_permissions."
         fi
     else
-        echo "Error: $file_path does not exist."
+        echo_warning "$file_path does not exist."
     fi
+}
+
+set_git_config() {
+    local username="$1"
+    local email="$2"
+
+    # Set Git username
+    git config --global user.name "$username"
+    echo_success "Git username set to: $username"
+
+    # Set Git email
+    git config --global user.email "$email"
+    echo_success "Git email set to: $email"
 }
 
 # Set up SSH directory if not already present
@@ -141,5 +154,7 @@ else
     brew install git
     echo_success "git installed using Homebrew."
 fi
+
+set_git_config "Utkarsh Shigihalli" "onlyutkarsh@users.noreply.github.com"
 
 echo_success "All done!"
