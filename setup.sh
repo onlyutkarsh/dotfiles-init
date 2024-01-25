@@ -125,9 +125,13 @@ if ! command -v brew &>/dev/null; then
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
     # Add Homebrew to Zsh configuration
-    echo 'eval $(/home/linuxbrew/.linuxbrew/bin/brew shellenv)' >>~/.zshrc
-    eval $(/home/linuxbrew/.linuxbrew/bin/brew shellenv)
-
+    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        echo 'eval $(/home/linuxbrew/.linuxbrew/bin/brew shellenv)' >>~/.zshrc
+        eval $(/home/linuxbrew/.linuxbrew/bin/brew shellenv)
+    elif [[ "$OSTYPE" == "darwin"* ]]; then
+        echo 'eval $(/opt/homebrew/bin/brew shellenv)' >>~/.zshrc
+        eval $(/opt/homebrew/bin/brew shellenv)
+    fi
     # Test Homebrew installation
     brew doctor
 
