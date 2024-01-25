@@ -40,7 +40,7 @@ set_permissions() {
             chmod "$desired_permissions" "$file_path"
             echo_success "permissions for $file_path set to $desired_permissions."
         else
-            echo_message "permissions for $file_path are already $desired_permissions."
+            echo_message "permissions for $file_path is already $desired_permissions."
         fi
     else
         echo_warning "$file_path does not exist."
@@ -149,10 +149,7 @@ fi
 
 # Check if Git is installed
 if brew list --formula | grep -q "git"; then
-    echo_message "git is already installed. updating..."
-    # Update Git using Homebrew
-    brew upgrade git
-    echo_info "git updated using Homebrew."
+    echo_message "git is already installed."
 else
     # Install Git using Homebrew
     brew install git
@@ -161,4 +158,4 @@ fi
 
 set_git_config "Utkarsh Shigihalli" "onlyutkarsh@users.noreply.github.com"
 
-echo_success "All done!"
+echo_success "All done! - Run brew update if you want to update the tools."
