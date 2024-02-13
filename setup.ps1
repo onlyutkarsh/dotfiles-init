@@ -105,7 +105,10 @@ Check-Path -filePath "$sshDir\id_ed25519_gitlab.pub"
 Check-Path -filePath "$sshDir\id_rsa_azuredevops"
 Check-Path -filePath "$sshDir\id_rsa_azuredevops.pub"
 
-Set-GitConfig -username "Utkarsh Shigihalli" -email "onlyutkarsh@users.noreply.github.com"
+# get user name and email from user
+Read-Host "Enter your GitHub username: " | Set-GitConfig -username $username
+Read-Host "Enter your GitHub email: " | Set-GitConfig -email $email
+#Set-GitConfig -username "Utkarsh Shigihalli" -email "onlyutkarsh@users.noreply.github.com"
 
 # install scoop
 Write-Message "Installing Scoop..."

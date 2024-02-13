@@ -156,6 +156,10 @@ else
     echo_success "git installed using Homebrew."
 fi
 
-set_git_config "Utkarsh Shigihalli" "onlyutkarsh@users.noreply.github.com"
+# take username and email from user
+echo_info "Enter your git user name and email"
+read -p "User Name: " username
+read -p "Email: " email
+set_git_config "$username" "$email"
 
 echo_success "All done! - Run brew update if you want to update the tools."
