@@ -66,7 +66,12 @@ else {
 
 # Configure SSH config file for GitHub and GitLab
 $configFile = "$sshDir\config"
-
+Check-Path -filePath $configFile
+# create empty config file if it does not exist
+if (-not (Test-Path $configFile)) {
+    New-Item -Path $configFile -ItemType File | Out-Null
+    Write-SuccessMsg "$configFile did not exist - Empty config file created."
+}
 if (-not (Get-Content $configFile | Select-String "Host github.com")) {
     Add-Content -Path $configFile -Value "`nHost github.com`n    HostName github.com`n    IdentityFile ~\.ssh\id_ed25519_github"
     Write-SuccessMsg "GitHub entry added to $configFile."
@@ -90,8 +95,6 @@ if (-not (Get-Content $configFile | Select-String "Host ssh.dev.azure.com")) {
 else {
     Write-Message "Azure DevOps entry already exists in $configFile."
 }
-
-Check-Path -filePath $configFile
 
 # Copy and set permissions for GitHub SSH key
 Check-Path -filePath "$sshDir\id_ed25519_github"
@@ -122,14 +125,11 @@ Write-Message "Installing packages..."
 scoop install git
 scoop install 1password-cli
 scoop install starship
-scoop install azure-cli
 # install jetbrains nerd font
 scoop bucket add nerd-fonts
-scoop install FiraCode
 scoop install FiraCode-NF
-scoop install FiraMono-NF
 scoop install JetBrainsMono-NF
-scoop install JetBrainsMono-NF-Mono
+
 
 
 # copy starship config
