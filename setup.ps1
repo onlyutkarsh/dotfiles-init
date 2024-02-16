@@ -126,7 +126,10 @@ scoop install azure-cli
 
 # copy starship config
 Write-Message "Copying Starship config..."
-Invoke-Expression (Invoke-WebRequest -Uri "https://raw.githubusercontent.com/onlyutkarsh/dotfiles-init/main/starship.toml").Content | Out-File -FilePath $env:USERPROFILE\.config\starship.toml
+$webClient = New-Object System.Net.WebClient
+$webClient.Encoding = [System.Text.Encoding]::UTF8
+$webClient.DownloadFile("https://raw.githubusercontent.com/onlyutkarsh/dotfiles-init/main/starship.toml", "$env:USERPROFILE\.config\starship.toml")
+Clear-Variable -Name webClient
 
 # configure scoop
 Write-Message "Configuring Scoop..."
