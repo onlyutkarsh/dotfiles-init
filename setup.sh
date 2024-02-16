@@ -140,26 +140,38 @@ else
     echo_message "Homebrew is already installed."
 fi
 
-if ! command -v chezmoi &>/dev/null; then
-    brew install chezmoi
-    echo_success "chezmoi installed."
+# download Brewfile from GitHub silently
+mkdir -p ~/.tmp
+curl -s -o ~/.tmp/Brewfile https://raw.githubusercontent.com/onlyutkarsh/dotfiles-init/main/Brewfile
+
+# Install packages from Brewfile
+brew bundle install --file=~/.tmp/Brewfile
+
+# setup starship
+echo_info "Setting up starship prompt"
+mkdir -p ~/.config
+curl -s -o ~/.config/starship.toml https://raw.githubusercontent.com/onlyutkarsh/dotfiles-init/main/starship.toml
+# add starship to zshrc if not already present
+if ! grep -q "eval \"\$(starship init zsh)\"" ~/.zshrc; then
+    echo 'eval "$(starship init zsh)"' >>~/.zshrc
+    echo_success "starship prompt setup successfully."
 else
-    echo_message "chezmoi is already installed."
+    echo_message "starship prompt is already set up."
 fi
 
-# Check if Git is installed
-if brew list --formula | grep -q "git"; then
-    echo_message "git is already installed."
+# ask if user wants to set git username and email
+echo_info "Do you want to set your git username and email?"
+read -p "Enter y/n: " set_git_config
+if [ "$set_git_config" == "y" ]; then
+    # take username and email from user
+    echo_info "Enter your git user name and email"
+    read -p "Enter your Git username: " username
+    read -p "Enter your Git email (e.g: username@users.noreply.github.com):" email
+    set_git_config "$username" "$email"
+    exit 0
 else
-    # Install Git using Homebrew
-    brew install git
-    echo_success "git installed using Homebrew."
+    echo_success "All done! - Run brew update if you want to update the tools."
+    exit 0
 fi
 
-# take username and email from user
-echo_info "Enter your git user name and email"
-read -p "User Name: " username
-read -p "Email: " email
-set_git_config "$username" "$email"
 
-echo_success "All done! - Run brew update if you want to update the tools."

@@ -105,10 +105,16 @@ Check-Path -filePath "$sshDir\id_ed25519_gitlab.pub"
 Check-Path -filePath "$sshDir\id_rsa_azuredevops"
 Check-Path -filePath "$sshDir\id_rsa_azuredevops.pub"
 
-# get user name and email from user
-Read-Host "Enter your GitHub username: " | Set-GitConfig -username $username
-Read-Host "Enter your GitHub email: " | Set-GitConfig -email $email
-#Set-GitConfig -username "Utkarsh Shigihalli" -email "onlyutkarsh@users.noreply.github.com"
+# check with user if they want to set git username and email
+$setGitUser = Read-Host "Do you want to set your Git username? (y/n)"
+if ($setGitUser -eq "y") {
+    # get user name and email from user
+    Read-Host "Enter your Git username: " | Set-GitConfig -username $username
+    Read-Host "Enter your Git email (e.g: username@users.noreply.github.com): " | Set-GitConfig -email $email
+}
+else {
+    $username = ""
+}
 
 # install scoop
 Write-Message "Installing Scoop..."
@@ -121,5 +127,20 @@ if (-not (Test-Path $env:USERPROFILE\scoop)) {
 else {
     Write-Message "Scoop is already installed."
 }
+
+# install packages
+Write-Message "Installing packages..."
+scoop install git
+scoop install 1password-cli
+scoop install starship
+scoop install azure-cli
+
+# copy starship config
+Write-Message "Copying Starship config..."
+Invoke-Expression (Invoke-WebRequest -Uri "https://raw.githubusercontent.com/onlyutkarsh/dotfiles-init/main/starship.toml" -UseBasicParsing).Content | Out-File -FilePath $env:USERPROFILE\.config\starship.toml
+
+# configure scoop
+Write-Message "Configuring Scoop..."
+Invoke-Expression (&starship init powershell)
 
 Write-SuccessMsg "All done!"

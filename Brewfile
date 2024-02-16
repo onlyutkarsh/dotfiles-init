@@ -4,3 +4,9 @@ brew "fzf"
 brew "git"
 # chezmoi
 brew "chezmoi"
+# starship
+brew "starship"
+# zsh-auto-suggestions
+brew "zsh-autosuggestions"
+# zsh-syntax-highlighting
+brew "zsh-syntax-highlighting"
