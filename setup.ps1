@@ -141,7 +141,8 @@ Clear-Variable -Name webClient
 Write-Message "Configuring Scoop..."
 # add Invoke-Expression (&starship init powershell) to $PROFILE if the line does not exist
 if (-not (Get-Content $PROFILE | Select-String "Invoke-Expression (&starship init powershell)")) {
-    Write-Host "`nInvoke-Expression (&starship init powershell)" >> $PROFILE
+    Write-Host "Invoke-Expression (&starship init powershell)" >> $PROFILE
+    Write-SuccessMsg "Added scoop config info to $PROFILE."
 }
 
 # check with user if they want to set git username and email
