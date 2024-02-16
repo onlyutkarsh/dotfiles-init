@@ -123,6 +123,14 @@ scoop install git
 scoop install 1password-cli
 scoop install starship
 scoop install azure-cli
+# install jetbrains nerd font
+scoop bucket add nerd-fonts
+scoop install FiraCode
+scoop install FiraCode-NF
+scoop install FiraMono-NF
+scoop install JetBrainsMono-NF
+scoop install JetBrainsMono-NF-Mono
+
 
 # copy starship config
 Write-Message "Copying Starship config..."
