@@ -153,6 +153,8 @@ mkdir -p ~/.config
 curl -s -o ~/.config/starship.toml https://raw.githubusercontent.com/onlyutkarsh/dotfiles-init/main/starship.toml
 # add starship to zshrc if not already present
 if ! grep -q "eval \"\$(starship init zsh)\"" ~/.zshrc; then
+    # add new line and starship prompt to zshrc
+    echo "\n" >>~/.zshrc
     echo 'eval "$(starship init zsh)"' >>~/.zshrc
     echo_success "starship prompt setup successfully."
 else

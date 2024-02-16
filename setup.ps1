@@ -130,8 +130,6 @@ scoop bucket add nerd-fonts
 scoop install FiraCode-NF
 scoop install JetBrainsMono-NF
 
-
-
 # copy starship config
 Write-Message "Copying Starship config..."
 $webClient = New-Object System.Net.WebClient
@@ -141,7 +139,10 @@ Clear-Variable -Name webClient
 
 # configure scoop
 Write-Message "Configuring Scoop..."
-Invoke-Expression (&starship init powershell)
+# add Invoke-Expression (&starship init powershell) to $PROFILE if the line does not exist
+if (-not (Get-Content $PROFILE | Select-String "Invoke-Expression (&starship init powershell)")) {
+    Write-Host "`nInvoke-Expression (&starship init powershell)" >> $PROFILE
+}
 
 # check with user if they want to set git username and email
 $setGitUser = Read-Host "Do you want to set your Git username? (y/n)"
