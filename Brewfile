@@ -10,3 +10,4 @@ brew "starship"
 brew "zsh-autosuggestions"
 # zsh-syntax-highlighting
 brew "zsh-syntax-highlighting"
+brew "gum"
