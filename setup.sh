@@ -14,7 +14,11 @@ set_permissions() {
     # Check if the file exists
     if [ -e "$file_path" ]; then
         # Check current permissions
-        current_permissions=$(stat -f%p "$file_path") 2>/dev/null || current_permissions=$(stat -c%a "$file_path")
+        if [[ $(uname) == "Linux" ]]; then
+            current_permissions=$(stat -c%a "$file_path") 2>/dev/null
+        elif [[ $(uname) == "Darwin" ]]; then
+            current_permissions=$(stat -f%p "$file_path") 2>/dev/null || current_permissions=$(stat -f%Lp "$file_path")
+        fi
 
         # Check if permissions are different from the desired value
         if [ "$current_permissions" != "$desired_permissions" ]; then
@@ -42,23 +46,50 @@ set_git_config() {
     gum style --foreground $SUCCESS_COLOR "git email set to: $email"
 }
 
+write_message() {
+    local message="$1"
+    local type="$2"
+    if command -v gum &>/dev/null; then
+        case "$type" in
+            "success")
+                gum style --foreground $SUCCESS_COLOR "$message"
+                ;;
+            "message")
+                gum style --foreground $MESSAGE_COLOR "$message"
+                ;;
+            "warning")
+                gum style --foreground $WARNING_COLOR "$message"
+                ;;
+            "error")
+                gum style --foreground $ERROR_COLOR "$message"
+                ;;
+            *)
+                echo "$message"
+                ;;
+        esac
+    else
+        echo "$message"
+    fi
+}
+
 # Install Zsh if not already installed
 if [[ $(uname) == "Linux" ]]; then
     if ! command -v zsh &>/dev/null; then
         sudo apt update
         sudo apt install -y zsh
         chsh -s $(which zsh)
-        gum style --foreground $SUCCESS_COLOR "zsh installed and configured."
+        write_message "zsh installed and configured.", "success"
     else
-        gum style --foreground $MESSAGE_COLOR "zsh is already installed."
+        write_message "zsh is already installed.", "message"
     fi
 elif [[ $(uname) == "Darwin" ]]; then
     if ! command -v zsh &>/dev/null; then
         brew install zsh
         chsh -s $(which zsh)
         gum style --foreground $SUCCESS_COLOR "zsh installed and configured."
+        write_message "zsh installed and configured.", "success"
     else
-        gum style --foreground $MESSAGE_COLOR "zsh is already installed."
+        write_message "zsh is already installed.", "message" 
     fi
 fi
 
@@ -78,9 +109,9 @@ if ! command -v brew &>/dev/null; then
     # Test Homebrew installation
     brew doctor
 
-    gum style --foreground $SUCCESS_COLOR "Homebrew installed and configured."
+    write_message "Homebrew installed and configured.", "success"
 else
-    gum style --foreground $MESSAGE_COLOR "Homebrew is already installed."
+    write_message "Homebrew is already installed.", "message"
 fi
 
 # download Brewfile from GitHub silently
