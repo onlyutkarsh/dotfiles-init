@@ -10,4 +10,11 @@ brew "starship"
 brew "zsh-autosuggestions"
 # zsh-syntax-highlighting
 brew "zsh-syntax-highlighting"
+
+# gum for styling
 brew "gum"
+
+# taskfile for utility scripts
+brew  "go-task"
+
+
