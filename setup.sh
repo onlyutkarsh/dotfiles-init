@@ -29,7 +29,7 @@ set_permissions() {
             gum style --foreground "$MESSAGE_COLOR" "permissions for $file_path is already $desired_permissions."
         fi
     else
-        echo_warning "$file_path does not exist."
+        write_message "$file_path does not exist.", "warning"
     fi
 }
 
