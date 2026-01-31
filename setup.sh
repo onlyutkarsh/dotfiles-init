@@ -1,197 +1,126 @@
 #!/bin/bash
+set -e
 
-# colors
-SUCCESS_COLOR="#2ECC71"
-MESSAGE_COLOR="#A5D6FF"
-WARNING_COLOR="#FFA500"
-ERROR_COLOR="#FF0000"
+# Colors
+GREEN='\033[0;32m'
+BLUE='\033[0;36m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
 
-# Function to copy and set permissions for SSH key files
-set_permissions() {
-    local file_path="$1"
-    local desired_permissions="$2"
+log_success() { echo -e "${GREEN}✓ $1${NC}"; }
+log_info() { echo -e "${BLUE}→ $1${NC}"; }
+log_warning() { echo -e "${YELLOW}⚠ $1${NC}"; }
 
-    # Check if the file exists
-    if [ -e "$file_path" ]; then
-        # Check current permissions
-        if [[ $(uname) == "Linux" ]]; then
-            current_permissions=$(stat -c%a "$file_path") 2>/dev/null
-        elif [[ $(uname) == "Darwin" ]]; then
-            current_permissions=$(stat -f%p "$file_path") 2>/dev/null || current_permissions=$(stat -f%Lp "$file_path")
-        fi
+# Detect OS
+OS="$(uname -s)"
+case "$OS" in
+    Linux*)  PLATFORM="linux";;
+    Darwin*) PLATFORM="macos";;
+    *)       echo "Unsupported OS: $OS"; exit 1;;
+esac
 
-        # Check if permissions are different from the desired value
-        if [ "$current_permissions" != "$desired_permissions" ]; then
-            # Set permissions to the desired value
-            chmod "$desired_permissions" "$file_path"
-            gum style --foreground "$SUCCESS_COLOR" "permissions for $file_path set to $desired_permissions."
-        else
-            gum style --foreground "$MESSAGE_COLOR" "permissions for $file_path is already $desired_permissions."
-        fi
-    else
-        write_message "$file_path does not exist.", "warning"
-    fi
-}
+log_info "Detected platform: $PLATFORM"
 
-set_git_config() {
-    local username="$1"
-    local email="$2"
-
-    # Set Git username
-    git config --global user.name "$username"
-    gum style --foreground $SUCCESS_COLOR "git username set to: $username"
-
-    # Set Git email
-    git config --global user.email "$email"
-    gum style --foreground $SUCCESS_COLOR "git email set to: $email"
-}
-
-write_message() {
-    local message="$1"
-    local type="$2"
-    if command -v gum &>/dev/null; then
-        case "$type" in
-            "success")
-                gum style --foreground $SUCCESS_COLOR "$message"
-                ;;
-            "message")
-                gum style --foreground $MESSAGE_COLOR "$message"
-                ;;
-            "warning")
-                gum style --foreground $WARNING_COLOR "$message"
-                ;;
-            "error")
-                gum style --foreground $ERROR_COLOR "$message"
-                ;;
-            *)
-                echo "$message"
-                ;;
-        esac
-    else
-        echo "$message"
-    fi
-}
-
-# Install Zsh if not already installed
-if [[ $(uname) == "Linux" ]]; then
-    if ! command -v zsh &>/dev/null; then
-        sudo apt update
-        sudo apt install -y zsh
-        chsh -s $(which zsh)
-        write_message "zsh installed and configured.", "success"
-    else
-        write_message "zsh is already installed.", "message"
-    fi
-elif [[ $(uname) == "Darwin" ]]; then
-    if ! command -v zsh &>/dev/null; then
-        brew install zsh
-        chsh -s $(which zsh)
-        gum style --foreground $SUCCESS_COLOR "zsh installed and configured."
-        write_message "zsh installed and configured.", "success"
-    else
-        write_message "zsh is already installed.", "message" 
-    fi
-fi
-
-# Check if Homebrew is installed
+# Install Homebrew if not present
 if ! command -v brew &>/dev/null; then
-    # Install Homebrew
+    log_info "Installing Homebrew..."
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-    # Add Homebrew to Zsh configuration
-    if [[ $(uname) == "Linux" ]]; then
-        echo 'eval $(/home/linuxbrew/.linuxbrew/bin/brew shellenv)' >>~/.zshrc
-        eval $(/home/linuxbrew/.linuxbrew/bin/brew shellenv)
-    elif [[ $(uname) == "Darwin" ]]; then
-        echo 'eval $(/opt/homebrew/bin/brew shellenv)' >>~/.zshrc
-        eval $(/opt/homebrew/bin/brew shellenv)
+    # Add to PATH
+    if [ "$PLATFORM" = "linux" ]; then
+        echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> ~/.bashrc
+        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+    else
+        echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+        eval "$(/opt/homebrew/bin/brew shellenv)"
     fi
-    # Test Homebrew installation
-    brew doctor
-
-    write_message "Homebrew installed and configured.", "success"
+    log_success "Homebrew installed"
 else
-    write_message "Homebrew is already installed.", "message"
+    log_info "Homebrew already installed"
 fi
 
-# download Brewfile from GitHub silently
-if [ -d ~/.tmp ]; then
-    rm -rf ~/.tmp
-fi
-mkdir -p ~/.tmp
-curl -s -o ~/.tmp/Brewfile https://raw.githubusercontent.com/onlyutkarsh/dotfiles-init/main/Brewfile
+# Install essential packages
+log_info "Installing git, 1password-cli, and chezmoi..."
+brew install git 1password-cli chezmoi
+log_success "Essential packages installed"
 
-# Install packages from Brewfile
-brew bundle install --file=~/.tmp/Brewfile
-
-# Set up SSH directory if not already present
+# Setup SSH directory
 ssh_dir="$HOME/.ssh"
 if [ ! -d "$ssh_dir" ]; then
     mkdir -p "$ssh_dir"
     chmod 700 "$ssh_dir"
-    gum style --foreground $SUCCESS_COLOR "~/.ssh directory created successfully."
+    log_success "Created ~/.ssh directory"
 else
-    gum style --foreground $MESSAGE_COLOR "directory ~/.ssh already exists."
+    log_info "~/.ssh directory already exists"
 fi
 
-# Configure SSH config file for GitHub and GitLab
-# Check and append entries to SSH config file for GitHub and GitLab
+# Create SSH config
 config_file="$ssh_dir/config"
-
-if ! grep -q "Host github.com" "$config_file"; then
-    echo -e "\nHost github.com\n    HostName github.com\n    IdentityFile ~/.ssh/id_ed25519_github" >>"$config_file"
-    gum style --foreground $SUCCESS_COLOR "GitHub entry added to $config_file."
-else
-    gum style --foreground $MESSAGE_COLOR "GitHub entry already exists in $config_file."
+if [ ! -f "$config_file" ]; then
+    touch "$config_file"
+    chmod 600 "$config_file"
+    log_success "Created SSH config file"
 fi
 
-if ! grep -q "Host gitlab.com" "$config_file"; then
-    echo -e "\nHost gitlab.com\n    HostName gitlab.com\n    IdentityFile ~/.ssh/id_ed25519_gitlab" >>"$config_file"
-    gum style --foreground $SUCCESS_COLOR "GitLab entry added to $config_file."
+# Add GitHub entry
+if ! grep -q "Host github.com" "$config_file" 2>/dev/null; then
+    cat >> "$config_file" << 'EOF'
+
+Host github.com
+    HostName github.com
+    IdentityFile ~/.ssh/github.pub
+EOF
+    log_success "Added GitHub to SSH config"
 else
-    gum style --foreground $MESSAGE_COLOR "GitLab entry already exists in $config_file."
+    log_info "GitHub already in SSH config"
 fi
 
-if ! grep -q "Host ssh.dev.azure.com" "$config_file"; then
-    echo -e "\nHost ssh.dev.azure.com\n    HostName ssh.dev.azure.com\n    IdentityFile ~/.ssh/id_rsa_azuredevops" >>"$config_file"
-    gum style --foreground $SUCCESS_COLOR "Azure DevOps entry added to $config_file."
+# Add GitLab entry
+if ! grep -q "Host gitlab.com" "$config_file" 2>/dev/null; then
+    cat >> "$config_file" << 'EOF'
+
+Host gitlab.com
+    HostName gitlab.com
+    IdentityFile ~/.ssh/gitlab.pub
+EOF
+    log_success "Added GitLab to SSH config"
 else
-    gum style --foreground $MESSAGE_COLOR "Azure DevOps entry already exists in $config_file."
+    log_info "GitLab already in SSH config"
 fi
 
-set_permissions "$config_file" 600
+# Add Azure DevOps entry
+if ! grep -q "Host ssh.dev.azure.com" "$config_file" 2>/dev/null; then
+    cat >> "$config_file" << 'EOF'
 
-# Copy and set permissions for GitHub SSH key
-set_permissions "$ssh_dir/id_ed25519_github" 600
-set_permissions "$ssh_dir/id_ed25519_github.pub" 644
-
-# Copy and set permissions for GitLab SSH key
-set_permissions "$ssh_dir/id_ed25519_gitlab" 600
-set_permissions "$ssh_dir/id_ed25519_gitlab.pub" 644
-
-# Copy and set permissions for Azure DevOps SSH key
-set_permissions "$ssh_dir/id_rsa_azuredevops" 600
-set_permissions "$ssh_dir/id_rsa_azuredevops.pub" 644
-
-# setup starship
-gum style --foreground $MESSAGE_COLOR "Setting up starship prompt"
-mkdir -p ~/.config
-curl -s -o ~/.config/starship.toml https://raw.githubusercontent.com/onlyutkarsh/dotfiles-init/main/starship.toml
-# add starship to zshrc if not already present
-if ! grep -q "eval \"\$(starship init zsh)\"" ~/.zshrc; then
-    # add new line and starship prompt to zshrc
-    echo "\n" >>~/.zshrc
-    echo 'eval "$(starship init zsh)"' >>~/.zshrc
-    gum style --foreground $SUCCESS_COLOR "starship prompt setup successfully."
+Host ssh.dev.azure.com
+    HostName ssh.dev.azure.com
+    IdentityFile ~/.ssh/ado.pub
+EOF
+    log_success "Added Azure DevOps to SSH config"
 else
-    gum style --foreground $MESSAGE_COLOR "starship prompt is already set up."
+    log_info "Azure DevOps already in SSH config"
 fi
 
-# ask if user wants to set git username and email
-gum confirm "Do you want to set your Git username and email?" || exit 0
-GITHUB_USER=$(gum input --placeholder "Utkarsh Shigihalli" --value "$GITHUB_USER")
-GITHUB_EMAIL=$(gum input --placeholder "onlyutkarsh@users.noreply.github.com" --value "$GITHUB_EMAIL")
-set_git_config "$GITHUB_USER" "$GITHUB_EMAIL"
+# Alert user about SSH keys
+echo ""
+log_warning "IMPORTANT: Copy your SSH PUBLIC keys from 1Password to ~/.ssh/"
+log_info "Private keys stay in 1Password - only public keys are needed locally"
+echo "Required files:"
+echo "  - github.pub"
+echo "  - gitlab.pub"
+echo "  - ado.pub"
+echo ""
+read -p "Press Enter after you've copied the public keys to continue..."
 
-gum style --foreground $SUCCESS_COLOR "All done! - Run brew update if you want to update the tools."
-exit 0
+# Set SSH key permissions
+log_info "Setting SSH public key permissions..."
+[ -f "$ssh_dir/github.pub" ] && chmod 644 "$ssh_dir/github.pub" && log_success "Set permissions for github.pub"
+[ -f "$ssh_dir/gitlab.pub" ] && chmod 644 "$ssh_dir/gitlab.pub" && log_success "Set permissions for gitlab.pub"
+[ -f "$ssh_dir/ado.pub" ] && chmod 644 "$ssh_dir/ado.pub" && log_success "Set permissions for ado.pub"
+
+# Initialize chezmoi
+echo ""
+log_info "Ready to initialize chezmoi!"
+echo "Run: chezmoi init --apply git@github.com:onlyutkarsh/dotfiles.git"
+echo ""
+log_success "Bootstrap complete! Chezmoi will handle the rest."

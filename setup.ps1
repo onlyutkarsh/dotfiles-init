@@ -1,156 +1,111 @@
-# Function to write an error message in red
-function Write-ErrorMsg {
-    param([string]$msg)
-    Write-Host "Error: $msg" -ForegroundColor Red
+# Minimal bootstrap script for Windows
+$ErrorActionPreference = "Stop"
+
+function Write-Success { param([string]$msg) Write-Host "✓ $msg" -ForegroundColor Green }
+function Write-Info { param([string]$msg) Write-Host "→ $msg" -ForegroundColor Cyan }
+function Write-Warning { param([string]$msg) Write-Host "⚠ $msg" -ForegroundColor Yellow }
+
+Write-Info "Starting Windows bootstrap..."
+
+# Install Scoop if not present
+if (-not (Get-Command scoop -ErrorAction SilentlyContinue)) {
+    Write-Info "Installing Scoop..."
+    Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
+    Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression
+    Write-Success "Scoop installed"
+} else {
+    Write-Info "Scoop already installed"
 }
 
-# Function to write a warning message in yellow
-function Write-WarningMsg {
-    param([string]$msg)
-    Write-Host "Warning: $msg" -ForegroundColor Yellow
-}
+# Install essential packages
+Write-Info "Installing git, 1password-cli, and chezmoi..."
+scoop install git 1password-cli chezmoi
+Write-Success "Essential packages installed"
 
-# Function to write a success message in green
-function Write-SuccessMsg {
-    param([string]$msg)
-    Write-Host $msg -ForegroundColor Green
-}
-
-# Function to write an info message in blue
-function Write-InfoMsg {
-    param([string]$msg)
-    Write-Host $msg -ForegroundColor Cyan
-}
-
-function Write-Message {
-    param([string]$msg)
-    Write-Host $msg -ForegroundColor DarkGray
-}
-
-# Function to copy and set permissions for SSH key files
-function Check-Path {
-    param(
-        [string]$filePath
-    )
-    # error if file does not exist
-    if (-Not (Test-Path $filePath)) {
-        Write-WarningMsg "$filePath does not exist."
-    }
-}
-
-function Set-GitConfig {
-    param(
-        [string]$username,
-        [string]$email
-    )
-
-    # Set Git username
-    git config --global user.name $username
-    Write-SuccessMsg "Git username set to: $username"
-
-    # Set Git email
-    git config --global user.email $email
-    Write-SuccessMsg "Git email set to: $email"
-}
-
-# Set up SSH directory if not already present
+# Setup SSH directory
 $sshDir = "$env:USERPROFILE\.ssh"
-if (-not (Test-Path $sshDir -PathType Container)) {
+if (-not (Test-Path $sshDir)) {
     New-Item -Path $sshDir -ItemType Directory | Out-Null
-    attrib -R $sshDir
-    Write-SuccessMsg "~\.ssh directory created."
-}
-else {
-    Write-Message "Directory ~\.ssh already exists."
+    Write-Success "Created ~/.ssh directory"
+} else {
+    Write-Info "~/.ssh directory already exists"
 }
 
-# Configure SSH config file for GitHub and GitLab
+# Create SSH config
 $configFile = "$sshDir\config"
-Check-Path -filePath $configFile
-# create empty config file if it does not exist
 if (-not (Test-Path $configFile)) {
     New-Item -Path $configFile -ItemType File | Out-Null
-    Write-SuccessMsg "$configFile did not exist - Empty config file created."
-}
-if (-not (Get-Content $configFile | Select-String "Host github.com")) {
-    Add-Content -Path $configFile -Value "`nHost github.com`n    HostName github.com`n    IdentityFile ~\.ssh\id_ed25519_github"
-    Write-SuccessMsg "GitHub entry added to $configFile."
-}
-else {
-    Write-Message "GitHub entry already exists in $configFile."
+    Write-Success "Created SSH config file"
 }
 
-if (-not (Get-Content $configFile | Select-String "Host gitlab.com")) {
-    Add-Content -Path $configFile -Value "`nHost gitlab.com`n    HostName gitlab.com`n    IdentityFile ~\.ssh\id_ed25519_gitlab"
-    Write-SuccessMsg "GitLab entry added to $configFile."
-}
-else {
-    Write-Message "GitLab entry already exists in $configFile."
-}
+# Add GitHub entry
+if (-not (Get-Content $configFile -ErrorAction SilentlyContinue | Select-String "Host github.com")) {
+    Add-Content -Path $configFile -Value @"
 
-if (-not (Get-Content $configFile | Select-String "Host ssh.dev.azure.com")) {
-    Add-Content -Path $configFile -Value "`nHost ssh.dev.azure.com`n    HostName ssh.dev.azure.com`n    IdentityFile ~\.ssh\id_rsa_azuredevops"
-    Write-SuccessMsg "Azure DevOps entry added to $configFile."
-}
-else {
-    Write-Message "Azure DevOps entry already exists in $configFile."
+Host github.com
+    HostName github.com
+    IdentityFile ~/.ssh/github.pub
+"@
+    Write-Success "Added GitHub to SSH config"
+} else {
+    Write-Info "GitHub already in SSH config"
 }
 
-# Copy and set permissions for GitHub SSH key
-Check-Path -filePath "$sshDir\id_ed25519_github"
-Check-Path -filePath "$sshDir\id_ed25519_github.pub"
+# Add GitLab entry
+if (-not (Get-Content $configFile -ErrorAction SilentlyContinue | Select-String "Host gitlab.com")) {
+    Add-Content -Path $configFile -Value @"
 
-# Copy and set permissions for GitLab SSH key
-Check-Path -filePath "$sshDir\id_ed25519_gitlab"
-Check-Path -filePath "$sshDir\id_ed25519_gitlab.pub"
-
-# Copy and set permissions for Azure DevOps SSH key
-Check-Path -filePath "$sshDir\id_rsa_azuredevops"
-Check-Path -filePath "$sshDir\id_rsa_azuredevops.pub"
-
-# install scoop
-Write-Message "Installing Scoop..."
-if (-not (Test-Path $env:USERPROFILE\scoop)) {
-    # Install Scoop
-    Set-ExecutionPolicy RemoteSigned -Scope CurrentUser # Optional: Needed to run a remote script the first time
-    Invoke-RestMethod get.scoop.sh | Invoke-Expression
-    Write-SuccessMsg "Scoop installed successfully."
-}
-else {
-    Write-Message "Scoop is already installed."
+Host gitlab.com
+    HostName gitlab.com
+    IdentityFile ~/.ssh/gitlab.pub
+"@
+    Write-Success "Added GitLab to SSH config"
+} else {
+    Write-Info "GitLab already in SSH config"
 }
 
-# install packages
-Write-Message "Installing packages..."
-scoop install git
-scoop install 1password-cli
-scoop install starship
-# install jetbrains nerd font
-scoop bucket add nerd-fonts
-scoop install FiraCode-NF
-scoop install JetBrainsMono-NF
+# Add Azure DevOps entry
+if (-not (Get-Content $configFile -ErrorAction SilentlyContinue | Select-String "Host ssh.dev.azure.com")) {
+    Add-Content -Path $configFile -Value @"
 
-# copy starship config
-Write-Message "Copying Starship config..."
-$webClient = New-Object System.Net.WebClient
-$webClient.Encoding = [System.Text.Encoding]::UTF8
-$webClient.DownloadFile("https://raw.githubusercontent.com/onlyutkarsh/dotfiles-init/main/starship.toml", "$env:USERPROFILE\.config\starship.toml")
-Clear-Variable -Name webClient
-
-# configure scoop
-Write-Message "Configuring Scoop..."
-# add Invoke-Expression (&starship init powershell) to $PROFILE if the line does not exist
-if (-not (Get-Content $PROFILE | Select-String "Invoke-Expression (&starship init powershell)")) {
-    Write-Host "Invoke-Expression (&starship init powershell)" >> $PROFILE
-    Write-SuccessMsg "Added scoop config info to $PROFILE."
+Host ssh.dev.azure.com
+    HostName ssh.dev.azure.com
+    IdentityFile ~/.ssh/ado.pub
+"@
+    Write-Success "Added Azure DevOps to SSH config"
+} else {
+    Write-Info "Azure DevOps already in SSH config"
 }
 
-# check with user if they want to set git username and email
-$setGitUser = Read-Host "Do you want to set your Git username? (y/n)"
-if ($setGitUser -eq "y") {
-    # get user name and email from user
-    Read-Host "Enter your Git username: " | Set-GitConfig -username $username
-    Read-Host "Enter your Git email (e.g: username@users.noreply.github.com): " | Set-GitConfig -email $email
+# Alert user about SSH keys
+Write-Host ""
+Write-Warning "IMPORTANT: Copy your SSH PUBLIC keys from 1Password to ~/.ssh/"
+Write-Info "Private keys stay in 1Password - only public keys are needed locally"
+Write-Host "Required files:"
+Write-Host "  - github.pub"
+Write-Host "  - gitlab.pub"
+Write-Host "  - ado.pub"
+Write-Host ""
+Read-Host "Press Enter after you've copied the public keys to continue"
+
+# Set SSH key permissions
+Write-Info "Setting SSH public key permissions..."
+if (Test-Path "$sshDir\github.pub") {
+    icacls "$sshDir\github.pub" /inheritance:r /grant:r "$($env:USERNAME):R" | Out-Null
+    Write-Success "Set permissions for github.pub"
+}
+if (Test-Path "$sshDir\gitlab.pub") {
+    icacls "$sshDir\gitlab.pub" /inheritance:r /grant:r "$($env:USERNAME):R" | Out-Null
+    Write-Success "Set permissions for gitlab.pub"
+}
+if (Test-Path "$sshDir\ado.pub") {
+    icacls "$sshDir\ado.pub" /inheritance:r /grant:r "$($env:USERNAME):R" | Out-Null
+    Write-Success "Set permissions for ado.pub"
 }
 
-Write-SuccessMsg "All done!"
+# Initialize chezmoi
+Write-Host ""
+Write-Info "Ready to initialize chezmoi!"
+Write-Host "Run: chezmoi init --apply git@github.com:onlyutkarsh/dotfiles.git"
+Write-Host ""
+Write-Success "Bootstrap complete! Chezmoi will handle the rest."
