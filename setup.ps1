@@ -77,30 +77,46 @@ Host ssh.dev.azure.com
     Write-Info "Azure DevOps already in SSH config"
 }
 
+# SSH key status check helper
+$sshPubFiles = @("github.pub", "gitlab.pub", "ado.pub")
+
+function Show-SshStatus {
+    foreach ($key in $sshPubFiles) {
+        if (Test-Path "$sshDir\$key") {
+            Write-Success "$key exists"
+        } else {
+            Write-Warning "$key MISSING"
+        }
+    }
+}
+
 # Alert user about SSH keys
 Write-Host ""
 Write-Warning "IMPORTANT: Copy your SSH PUBLIC keys from 1Password to ~/.ssh/"
 Write-Info "Private keys stay in 1Password - only public keys are needed locally"
-Write-Host "Required files:"
-Write-Host "  - github.pub"
-Write-Host "  - gitlab.pub"
-Write-Host "  - ado.pub"
+Write-Host ""
+Write-Info "Current SSH key status:"
+Show-SshStatus
 Write-Host ""
 Read-Host "Press Enter after you've copied the public keys to continue"
 
-# Set SSH key permissions
-Write-Info "Setting SSH public key permissions..."
-if (Test-Path "$sshDir\github.pub") {
-    icacls "$sshDir\github.pub" /inheritance:r /grant:r "$($env:USERNAME):R" | Out-Null
-    Write-Success "Set permissions for github.pub"
+# Show updated status and set permissions
+Write-Host ""
+Write-Info "SSH key status:"
+Show-SshStatus
+Write-Host ""
+
+Write-Info "Setting SSH permissions..."
+icacls $sshDir /inheritance:r /grant:r "$($env:USERNAME):F" | Out-Null
+if (Test-Path $configFile) {
+    icacls $configFile /inheritance:r /grant:r "$($env:USERNAME):R" | Out-Null
+    Write-Success "Set permissions for config (read-only)"
 }
-if (Test-Path "$sshDir\gitlab.pub") {
-    icacls "$sshDir\gitlab.pub" /inheritance:r /grant:r "$($env:USERNAME):R" | Out-Null
-    Write-Success "Set permissions for gitlab.pub"
-}
-if (Test-Path "$sshDir\ado.pub") {
-    icacls "$sshDir\ado.pub" /inheritance:r /grant:r "$($env:USERNAME):R" | Out-Null
-    Write-Success "Set permissions for ado.pub"
+foreach ($key in $sshPubFiles) {
+    if (Test-Path "$sshDir\$key") {
+        icacls "$sshDir\$key" /inheritance:r /grant:r "$($env:USERNAME):R" | Out-Null
+        Write-Success "Set permissions for $key (read-only)"
+    }
 }
 
 # Initialize chezmoi
