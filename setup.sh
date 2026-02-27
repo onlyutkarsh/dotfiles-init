@@ -72,9 +72,28 @@ else
 fi
 
 # Install essential packages
-log_info "Installing git, 1password-cli, and chezmoi..."
-brew install git 1password-cli chezmoi
+log_info "Installing git, 1password-cli, chezmoi, and zsh..."
+brew install git 1password-cli chezmoi zsh
 log_success "Essential packages installed"
+
+# Set zsh as default shell
+log_info "Configuring zsh as default shell..."
+zsh_path="$(brew --prefix)/bin/zsh"
+current_shell="$(basename "$SHELL")"
+
+if [ "$current_shell" = "zsh" ]; then
+    log_info "zsh is already the default shell"
+else
+    # Add zsh to allowed shells if not present
+    if ! grep -q "$zsh_path" /etc/shells 2>/dev/null; then
+        log_info "Adding zsh to /etc/shells..."
+        echo "$zsh_path" | sudo tee -a /etc/shells >/dev/null
+    fi
+    
+    log_info "Changing default shell to zsh..."
+    chsh -s "$zsh_path"
+    log_success "Default shell changed to zsh (restart terminal to take effect)"
+fi
 
 # Setup SSH directory
 ssh_dir="$HOME/.ssh"
