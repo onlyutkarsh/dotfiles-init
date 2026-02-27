@@ -77,6 +77,34 @@ Host ssh.dev.azure.com
     Write-Info "Azure DevOps already in SSH config"
 }
 
+# Create .gitconfig with 1Password SSH agent configuration
+Write-Info "Configuring .gitconfig for Windows SSH..."
+$gitConfigPath = "$env:USERPROFILE\.gitconfig"
+$expectedSshCommand = "C:/Windows/System32/OpenSSH/ssh.exe"
+
+if (Test-Path $gitConfigPath) {
+    Write-Info ".gitconfig exists, verifying sshCommand..."
+    $currentSshCommand = git config --global core.sshCommand
+    if ($currentSshCommand -eq $expectedSshCommand) {
+        Write-Success "sshCommand already correctly set"
+    } else {
+        Write-Info "Updating sshCommand to use Windows OpenSSH..."
+        git config --global core.sshCommand $expectedSshCommand
+        Write-Success "Updated sshCommand for 1Password SSH agent"
+    }
+} else {
+    $gitConfigContent = @"
+[core]
+	excludesfile = ~/.gitignore
+	attributesfile = ~/.gitattributes
+	autocrlf = input
+	pager = delta
+	sshCommand = C:/Windows/System32/OpenSSH/ssh.exe
+"@
+    Set-Content -Path $gitConfigPath -Value $gitConfigContent
+    Write-Success "Created .gitconfig with OpenSSH SSH command"
+}
+
 # SSH key status check helper
 $sshPubFiles = @("github.pub", "gitlab.pub", "ado.pub")
 

@@ -131,6 +131,52 @@ EOF
         done
     }
 
+    # Create .gitconfig with proper SSH command for 1Password agent
+    log_info "Configuring .gitconfig with SSH settings..."
+    gitconfig_path="$HOME/.gitconfig"
+    
+    if [ "$IS_WSL" = true ]; then
+        expected_ssh_command="/mnt/c/WINDOWS/System32/OpenSSH/ssh.exe"
+    else
+        expected_ssh_command=""
+    fi
+    
+    if [ -f "$gitconfig_path" ]; then
+        log_info ".gitconfig exists, verifying sshCommand..."
+        if [ "$IS_WSL" = true ]; then
+            current_ssh_command=$(git config --global core.sshCommand 2>/dev/null || true)
+            if [ "$current_ssh_command" = "$expected_ssh_command" ]; then
+                log_success "sshCommand already correctly set for WSL"
+            else
+                log_info "Updating sshCommand to use Windows OpenSSH from WSL..."
+                git config --global core.sshCommand "$expected_ssh_command"
+                log_success "Updated sshCommand for 1Password SSH agent"
+            fi
+        fi
+    else
+        if [ "$IS_WSL" = true ]; then
+            cat > "$gitconfig_path" << 'EOF'
+[core]
+	excludesfile = ~/.gitignore
+	attributesfile = ~/.gitattributes
+	autocrlf = input
+	pager = delta
+	sshCommand = /mnt/c/WINDOWS/System32/OpenSSH/ssh.exe
+EOF
+            log_success "Created .gitconfig for WSL with Windows SSH path"
+        else
+            cat > "$gitconfig_path" << 'EOF'
+[core]
+	excludesfile = ~/.gitignore
+	attributesfile = ~/.gitattributes
+	autocrlf = input
+	pager = delta
+EOF
+            log_success "Created .gitconfig for native $PLATFORM"
+        fi
+        chmod 644 "$gitconfig_path"
+    fi
+
     # Alert user about SSH keys
     echo ""
     log_warning "IMPORTANT: Copy your SSH PUBLIC keys from 1Password to ~/.ssh/"
