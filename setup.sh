@@ -29,6 +29,30 @@ if [ "$IS_WSL" = true ]; then
     log_info "Running inside WSL - SSH will be handled by Windows"
 fi
 
+# Install system dependencies on Linux/WSL
+if [ "$PLATFORM" = "linux" ]; then
+    log_info "Checking for required system packages..."
+    
+    # Check if unzip is installed
+    if ! command -v unzip &>/dev/null; then
+        log_info "Installing unzip (required by Homebrew)..."
+        sudo apt-get update -qq
+        sudo apt-get install -y unzip
+        log_success "unzip installed"
+    else
+        log_info "unzip already installed"
+    fi
+    
+    # Install other common dependencies for Homebrew on Linux
+    if ! dpkg -s build-essential curl file git &>/dev/null 2>&1; then
+        log_info "Installing build-essential and other dependencies..."
+        sudo apt-get install -y build-essential curl file git
+        log_success "Build dependencies installed"
+    else
+        log_info "Build dependencies already installed"
+    fi
+fi
+
 # Install Homebrew if not present
 if ! command -v brew &>/dev/null; then
     log_info "Installing Homebrew..."

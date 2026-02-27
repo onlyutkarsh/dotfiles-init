@@ -19,10 +19,12 @@ Invoke-Expression (Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/onl
 
 ## What it does
 
+- **Linux/WSL**: Installs required system dependencies (unzip, build-essential, curl, file, git)
 - Installs Homebrew (macOS/Linux) or Scoop (Windows)
 - Installs git, 1password-cli, and chezmoi
-- Sets up SSH config for GitHub, GitLab, and Azure DevOps
-- Prompts to copy SSH public keys from 1Password
+- Sets up SSH config for GitHub, GitLab, and Azure DevOps (skipped on WSL, handled by Windows)
+- **WSL**: Configures git to use Windows OpenSSH for 1Password SSH agent integration
+- Prompts to copy SSH public keys from 1Password (native macOS/Linux only)
 
 ## Next steps
 
