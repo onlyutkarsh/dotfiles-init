@@ -55,16 +55,30 @@ fi
 
 # Install Homebrew if not present
 if ! command -v brew &>/dev/null; then
+    for brew_path in /home/linuxbrew/.linuxbrew/bin/brew "$HOME/.linuxbrew/bin/brew" /opt/homebrew/bin/brew /usr/local/bin/brew; do
+        if [ -x "$brew_path" ]; then
+            eval "$("$brew_path" shellenv)"
+            break
+        fi
+    done
+fi
+if ! command -v brew &>/dev/null; then
     log_info "Installing Homebrew..."
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    brew_installer="$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    /bin/bash -c "$brew_installer"
 
     # Add to PATH
     if [ "$PLATFORM" = "linux" ]; then
         echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> ~/.bashrc
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
     else
-        echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
-        eval "$(/opt/homebrew/bin/brew shellenv)"
+        if [ -x /opt/homebrew/bin/brew ]; then
+            brew_path=/opt/homebrew/bin/brew
+        else
+            brew_path=/usr/local/bin/brew
+        fi
+        printf 'eval "$(%s shellenv)"\n' "$brew_path" >> ~/.zprofile
+        eval "$("$brew_path" shellenv)"
     fi
     log_success "Homebrew installed"
 else
@@ -158,94 +172,50 @@ if [ "$IS_WSL" = true ]; then
     # are managed on the Windows side. No SSH config or pub files needed here.
     log_info "Skipping SSH config and key setup (handled by Windows)"
     echo ""
-    log_warning "Make sure you have run setup.ps1 on Windows first to set up SSH keys and config."
+    log_warning "Run setup.ps1 on Windows first and enable the SSH agent in 1Password desktop."
 else
-    # Create SSH config
     config_file="$ssh_dir/config"
-    if [ ! -f "$config_file" ]; then
-        touch "$config_file"
-        chmod 600 "$config_file"
-        log_success "Created SSH config file"
-    fi
-
-    # Add GitHub entry
-    if ! grep -q "Host github.com" "$config_file" 2>/dev/null; then
-        cat >> "$config_file" << 'EOF'
-
-Host github.com
-    HostName github.com
-    IdentityFile ~/.ssh/github.pub
-EOF
-        log_success "Added GitHub to SSH config"
+    if [ "$PLATFORM" = "macos" ]; then
+        agent_socket="$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
     else
-        log_info "GitHub already in SSH config"
+        agent_socket="$HOME/.1password/agent.sock"
     fi
-
-    # Add GitLab entry
-    if ! grep -q "Host gitlab.com" "$config_file" 2>/dev/null; then
-        cat >> "$config_file" << 'EOF'
-
-Host gitlab.com
-    HostName gitlab.com
-    IdentityFile ~/.ssh/gitlab.pub
-EOF
-        log_success "Added GitLab to SSH config"
-    else
-        log_info "GitLab already in SSH config"
+    existing_config=""
+    if [ -f "$config_file" ]; then
+        existing_config="$(awk '
+            /^# BEGIN dotfiles-init 1Password$/ { managed = 1; next }
+            /^# END dotfiles-init 1Password$/ { managed = 0; next }
+            managed { next }
+            { print }
+        ' "$config_file")"
     fi
-
-    # Add Azure DevOps entry
-    if ! grep -q "Host ssh.dev.azure.com" "$config_file" 2>/dev/null; then
-        cat >> "$config_file" << 'EOF'
-
-Host ssh.dev.azure.com
-    HostName ssh.dev.azure.com
-    IdentityFile ~/.ssh/ado.pub
-EOF
-        log_success "Added Azure DevOps to SSH config"
-    else
-        log_info "Azure DevOps already in SSH config"
-    fi
-
-    # SSH key status check helper
-    ssh_pub_files=("github.pub" "gitlab.pub" "ado.pub")
-
-    show_ssh_status() {
-        for key in "${ssh_pub_files[@]}"; do
-            if [ -f "$ssh_dir/$key" ]; then
-                log_success "$key exists"
-            else
-                log_warning "$key MISSING"
-            fi
-        done
-    }
-
-    # Alert user about SSH keys
-    echo ""
-    log_warning "IMPORTANT: Copy your SSH PUBLIC keys from 1Password to ~/.ssh/"
-    log_info "Private keys stay in 1Password - only public keys are needed locally"
-    echo ""
-    log_info "Current SSH key status:"
-    show_ssh_status
-    echo ""
-    read -p "Press Enter after you've copied the public keys to continue..."
-
-    # Show updated status and set permissions
-    echo ""
-    log_info "SSH key status:"
-    show_ssh_status
-    echo ""
-
-    log_info "Setting SSH permissions..."
+    printf '# BEGIN dotfiles-init 1Password\nHost github.com\n    HostName github.com\n    User git\n    IdentityFile ~/.ssh/github.pub\n    IdentitiesOnly yes\n\nHost gitlab.com\n    HostName gitlab.com\n    IdentityFile ~/.ssh/gitlab.pub\n\nHost ssh.dev.azure.com vs-ssh.visualstudio.com\n    HostName ssh.dev.azure.com\n    IdentityFile ~/.ssh/ado.pub\n\nHost github.com gitlab.com ssh.dev.azure.com vs-ssh.visualstudio.com\n    IdentityAgent "%s"\n\nHost *\n# END dotfiles-init 1Password\n%s\n' "$agent_socket" "$existing_config" > "$config_file"
     chmod 700 "$ssh_dir"
-    [ -f "$ssh_dir/config" ] && chmod 600 "$ssh_dir/config" && log_success "Set permissions for config (600)"
-    for key in "${ssh_pub_files[@]}"; do
-        if [ -f "$ssh_dir/$key" ]; then
-            chmod 644 "$ssh_dir/$key"
-            log_success "Set permissions for $key (644)"
+    chmod 600 "$config_file"
+    log_success "Configured SSH public-key selectors to match dotfiles"
+    public_keys=(github.pub gitlab.pub ado.pub)
+    missing_keys=false
+    for public_key in "${public_keys[@]}"; do
+        if [ ! -f "$ssh_dir/$public_key" ]; then
+            log_warning "Missing $ssh_dir/$public_key"
+            missing_keys=true
         fi
     done
+    if [ "$missing_keys" = true ]; then
+        log_warning "Download these PUBLIC keys from 1Password to $ssh_dir. Private keys stay in 1Password."
+        read -r -p "Press Enter after downloading the public keys..."
+    fi
+    for public_key in "${public_keys[@]}"; do
+        if ! ssh-keygen -lf "$ssh_dir/$public_key"; then
+            log_warning "Missing or invalid public key: $ssh_dir/$public_key"
+            exit 1
+        fi
+        chmod 644 "$ssh_dir/$public_key"
+    done
 fi
+
+log_warning "Enable the SSH agent in 1Password desktop and unlock the app."
+log_info "Register the matching public keys with your Git hosts. On WSL, public-key files belong on Windows only."
 
 # Initialize chezmoi
 echo ""

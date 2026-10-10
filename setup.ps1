@@ -45,120 +45,80 @@ if (-not (Test-Path $sshDir)) {
     Write-Info "~/.ssh directory already exists"
 }
 
-# Create SSH config
 $configFile = "$sshDir\config"
-if (-not (Test-Path $configFile)) {
-    New-Item -Path $configFile -ItemType File | Out-Null
-    Write-Success "Created SSH config file"
-}
-
-# Add GitHub entry
-if (-not (Get-Content $configFile -ErrorAction SilentlyContinue | Select-String "Host github.com")) {
-    Add-Content -Path $configFile -Value @"
-
+$existingConfig = if (Test-Path -LiteralPath $configFile) {
+    [System.IO.File]::ReadAllText($configFile)
+} else { '' }
+$existingConfig = $existingConfig -replace '(?ms)^# BEGIN dotfiles-init 1Password\r?\n.*?^# END dotfiles-init 1Password\r?\n', ''
+$agentConfig = @'
+# BEGIN dotfiles-init 1Password
 Host github.com
     HostName github.com
+    User git
     IdentityFile ~/.ssh/github.pub
-"@
-    Write-Success "Added GitHub to SSH config"
-} else {
-    Write-Info "GitHub already in SSH config"
-}
-
-# Add GitLab entry
-if (-not (Get-Content $configFile -ErrorAction SilentlyContinue | Select-String "Host gitlab.com")) {
-    Add-Content -Path $configFile -Value @"
+    IdentitiesOnly yes
 
 Host gitlab.com
     HostName gitlab.com
     IdentityFile ~/.ssh/gitlab.pub
-"@
-    Write-Success "Added GitLab to SSH config"
-} else {
-    Write-Info "GitLab already in SSH config"
-}
 
-# Add Azure DevOps entry
-if (-not (Get-Content $configFile -ErrorAction SilentlyContinue | Select-String "Host ssh.dev.azure.com")) {
-    Add-Content -Path $configFile -Value @"
-
-Host ssh.dev.azure.com
+Host ssh.dev.azure.com vs-ssh.visualstudio.com
     HostName ssh.dev.azure.com
     IdentityFile ~/.ssh/ado.pub
-"@
-    Write-Success "Added Azure DevOps to SSH config"
-} else {
-    Write-Info "Azure DevOps already in SSH config"
-}
+
+Host *
+# END dotfiles-init 1Password
+'@
+$utf8 = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText($configFile, "$agentConfig`n$existingConfig", $utf8)
+Write-Success "Configured SSH public-key selectors to match dotfiles"
 
 # Create .gitconfig with 1Password SSH agent configuration
 Write-Info "Configuring .gitconfig for Windows SSH..."
-$gitConfigPath = "$env:USERPROFILE\.gitconfig"
-$expectedSshCommand = "C:/Windows/System32/OpenSSH/ssh.exe"
-
-if (Test-Path $gitConfigPath) {
-    Write-Info ".gitconfig exists, verifying sshCommand..."
-    $currentSshCommand = git config --global core.sshCommand
-    if ($currentSshCommand -eq $expectedSshCommand) {
-        Write-Success "sshCommand already correctly set"
-    } else {
-        Write-Info "Updating sshCommand to use Windows OpenSSH..."
-        git config --global core.sshCommand $expectedSshCommand
-        Write-Success "Updated sshCommand for 1Password SSH agent"
-    }
-} else {
-    $gitConfigContent = @"
-[core]
-	excludesfile = ~/.gitignore
-	attributesfile = ~/.gitattributes
-	autocrlf = input
-	pager = delta
-	sshCommand = C:/Windows/System32/OpenSSH/ssh.exe
-"@
-    Set-Content -Path $gitConfigPath -Value $gitConfigContent
-    Write-Success "Created .gitconfig with OpenSSH SSH command"
+$sshCommand = Join-Path $env:WINDIR 'System32/OpenSSH/ssh.exe'
+if (-not (Test-Path -LiteralPath $sshCommand)) {
+    throw "Install Windows OpenSSH Client from Optional Features, then rerun this script."
+}
+git config --global core.sshCommand ('"{0}"' -f ($sshCommand -replace '\\', '/'))
+if ($LASTEXITCODE -ne 0) {
+    throw "Failed to configure Windows OpenSSH (exit code $LASTEXITCODE)."
 }
 
-# SSH key status check helper
-$sshPubFiles = @("github.pub", "gitlab.pub", "ado.pub")
+Write-Host ""
+Write-Warning "Enable the SSH agent in 1Password desktop and unlock the app."
+Write-Info "Register the matching public keys with your Git hosts. Private keys stay in 1Password."
 
-function Show-SshStatus {
-    foreach ($key in $sshPubFiles) {
-        if (Test-Path "$sshDir\$key") {
-            Write-Success "$key exists"
-        } else {
-            Write-Warning "$key MISSING"
-        }
+$publicKeys = @('github.pub', 'gitlab.pub', 'ado.pub')
+$missingKeys = @($publicKeys | Where-Object {
+    -not (Test-Path -LiteralPath (Join-Path $sshDir $_) -PathType Leaf)
+})
+if ($missingKeys.Count -gt 0) {
+    Write-Warning "Download these PUBLIC keys from 1Password to ${sshDir}: $($missingKeys -join ', ')"
+    Read-Host "Press Enter after downloading the public keys"
+}
+$sshKeygen = Join-Path $env:WINDIR 'System32/OpenSSH/ssh-keygen.exe'
+foreach ($publicKey in $publicKeys) {
+    $keyPath = Join-Path $sshDir $publicKey
+    if (-not (Test-Path -LiteralPath $keyPath -PathType Leaf)) {
+        throw "Missing public key: $keyPath"
+    }
+    & $sshKeygen -lf $keyPath
+    if ($LASTEXITCODE -ne 0) {
+        throw "Invalid public key: $keyPath. Download the Public key directly from 1Password."
     }
 }
-
-# Alert user about SSH keys
-Write-Host ""
-Write-Warning "IMPORTANT: Copy your SSH PUBLIC keys from 1Password to ~/.ssh/"
-Write-Info "Private keys stay in 1Password - only public keys are needed locally"
-Write-Host ""
-Write-Info "Current SSH key status:"
-Show-SshStatus
-Write-Host ""
-Read-Host "Press Enter after you've copied the public keys to continue"
-
-# Show updated status and set permissions
-Write-Host ""
-Write-Info "SSH key status:"
-Show-SshStatus
-Write-Host ""
 
 Write-Info "Setting SSH permissions..."
 icacls $sshDir /inheritance:r /grant:r "$($env:USERNAME):F" | Out-Null
-if (Test-Path $configFile) {
-    icacls $configFile /inheritance:r /grant:r "$($env:USERNAME):R" | Out-Null
-    Write-Success "Set permissions for config (read-only)"
+if ($LASTEXITCODE -ne 0) {
+    throw "Failed to set SSH directory permissions (exit code $LASTEXITCODE)."
 }
-foreach ($key in $sshPubFiles) {
-    if (Test-Path "$sshDir\$key") {
-        icacls "$sshDir\$key" /inheritance:r /grant:r "$($env:USERNAME):R" | Out-Null
-        Write-Success "Set permissions for $key (read-only)"
+if (Test-Path $configFile) {
+    icacls $configFile /inheritance:r /grant:r "$($env:USERNAME):F" | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to set SSH config permissions (exit code $LASTEXITCODE)."
     }
+    Write-Success "Set permissions for config (owner only)"
 }
 
 # Initialize chezmoi
