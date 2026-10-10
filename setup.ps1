@@ -17,9 +17,23 @@ if (-not (Get-Command scoop -ErrorAction SilentlyContinue)) {
     Write-Info "Scoop already installed"
 }
 
+$installedBuckets = (scoop bucket list).Name
+if ($LASTEXITCODE -ne 0) {
+    throw "Failed to list Scoop buckets (exit code $LASTEXITCODE)."
+}
+if ($installedBuckets -notcontains 'extras') {
+    scoop bucket add extras
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to add the Scoop extras bucket (exit code $LASTEXITCODE)."
+    }
+}
+
 # Install essential packages
-Write-Info "Installing git, 1password-cli, and chezmoi..."
-scoop install git 1password-cli chezmoi
+Write-Info "Installing git, 1password-cli, chezmoi, and autohotkey..."
+scoop install git 1password-cli chezmoi autohotkey
+if ($LASTEXITCODE -ne 0) {
+    throw "Failed to install essential packages (exit code $LASTEXITCODE)."
+}
 Write-Success "Essential packages installed"
 
 # Setup SSH directory
